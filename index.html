@@ -26,6 +26,7 @@
   .hbtns{display:flex;gap:8px;align-items:center}
   .hbtn{position:relative;background:var(--panel);border:1px solid var(--line);color:var(--ink);
         border-radius:11px;padding:9px 13px;font-size:.95rem;font-weight:700}
+  .hbtn.accent{background:var(--orange);color:#1a1006;border-color:var(--orange)}
   .hbtn .badge{position:absolute;top:-7px;right:-7px;background:var(--orange);color:#1a1006;font-size:.72rem;
         font-weight:800;min-width:20px;height:20px;border-radius:10px;display:grid;place-items:center;padding:0 5px}
   .pending{color:var(--orange)}
@@ -113,6 +114,7 @@
   <header>
     <div class="brand"><span class="dot"></span>StockScan</div>
     <div class="hbtns">
+      <button class="hbtn accent" id="installBtn" hidden>Install</button>
       <button class="hbtn" id="syncBtn">Sync <span class="badge pending" id="pendBadge" hidden>0</span></button>
       <button class="hbtn" id="listBtn">List <span class="badge" id="cntBadge">0</span></button>
     </div>

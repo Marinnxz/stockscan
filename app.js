@@ -9,7 +9,7 @@ const el = {};
 ["video","reticle","scanhint","camerr","camerrmsg","torchBtn","manualBtn","manualBtn2","retryCam",
  "qpid","qsub","dupwarn","qval","qminus","qplus","pad","qcancel","qsave",
  "lbody","syncBtn","syncBtn2","listBtn","backScan","exportJson","exportCsv","setLaptop","clearBatch",
- "cntBadge","pendBadge","modal","msheet","toast"].forEach(id => el[id] = document.getElementById(id));
+ "cntBadge","pendBadge","modal","msheet","toast","installBtn"].forEach(id => el[id] = document.getElementById(id));
 
 // ---------- IndexedDB ----------
 const DB = {
@@ -380,7 +380,27 @@ function wire() {
   };
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") keepAwake(); });
   window.addEventListener("online", () => trySync(true));
+
+  // installable PWA: surface a clear Install button instead of hunting Chrome's menu
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    el.installBtn.hidden = false;
+  });
+  window.addEventListener("appinstalled", () => {
+    deferredPrompt = null;
+    el.installBtn.hidden = true;
+    toast("Installed! Open StockScan from your home screen.");
+  });
+  el.installBtn.onclick = async () => {
+    if (!deferredPrompt) { toast("Already installed, or use Chrome menu > Add to Home screen"); return; }
+    deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    if (choice && choice.outcome === "accepted") el.installBtn.hidden = true;
+  };
 }
+let deferredPrompt = null;
 
 async function init() {
   buildPad();
