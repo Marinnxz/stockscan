@@ -267,11 +267,11 @@ function toast(msg) {
 }
 
 function askLaptop() {
-  const cur = meta.laptopUrl || "http://192.168.1.5:8810";
+  const cur = meta.laptopUrl || "https://192.168.1.208:8810";
   showModal(
     "<h3>Laptop receiver address</h3>" +
-    "<p>Your laptop's address on the same wifi (find its IP with <b>ipconfig</b>). The receiver listens on port 8810.</p>" +
-    '<input id="lap" value="' + cur + '" placeholder="http://192.168.1.x:8810">' +
+    "<p>Your laptop's address on the same wifi (find its IP with <b>ipconfig</b>). The receiver listens on port 8810 over <b>https</b> — install the receiver's CA cert on this tablet once so it's trusted.</p>" +
+    '<input id="lap" value="' + cur + '" placeholder="https://192.168.1.x:8810">' +
     '<div class="mbtns"><button class="ghost" id="lcancel">Cancel</button><button class="ok" id="lsave">Save</button></div>'
   );
   $("#lcancel").onclick = closeModal;
