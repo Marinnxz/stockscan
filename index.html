@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0c0f14">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>StockScan</title>
+<style>
+  :root{
+    --bg:#0c0f14; --panel:#151a22; --panel2:#1b222d; --line:#232b38;
+    --ink:#e9eef6; --dim:#8a98ad; --orange:#ff7a1a; --green:#2ecc71; --red:#ff5d5d; --blue:#5aa0ff;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{font-family:system-ui,Roboto,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);
+       height:100dvh;display:flex;flex-direction:column;overflow:hidden;user-select:none}
+  button{font-family:inherit;cursor:pointer;border:0}
+
+  header{height:58px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+         padding:0 14px;background:#0d1117;border-bottom:1px solid var(--line);z-index:5}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:800;letter-spacing:.02em;font-size:1.15rem}
+  .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--orange);box-shadow:0 0 12px var(--orange)}
+  .hbtns{display:flex;gap:8px;align-items:center}
+  .hbtn{position:relative;background:var(--panel);border:1px solid var(--line);color:var(--ink);
+        border-radius:11px;padding:9px 13px;font-size:.95rem;font-weight:700}
+  .hbtn .badge{position:absolute;top:-7px;right:-7px;background:var(--orange);color:#1a1006;font-size:.72rem;
+        font-weight:800;min-width:20px;height:20px;border-radius:10px;display:grid;place-items:center;padding:0 5px}
+  .pending{color:var(--orange)}
+
+  main{flex:1 1 auto;position:relative;overflow:hidden}
+  .view{position:absolute;inset:0;display:none;flex-direction:column}
+  .view.active{display:flex}
+
+  /* scanner */
+  #scanner{background:#000}
+  .camwrap{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  #video{width:100%;height:100%;object-fit:cover}
+  .reticle{position:absolute;width:62vw;max-width:320px;aspect-ratio:1;border:3px solid rgba(255,255,255,.85);
+        border-radius:22px;box-shadow:0 0 0 100vmax rgba(0,0,0,.35);pointer-events:none}
+  .reticle.hit{border-color:var(--green)}
+  .scanhint{position:absolute;bottom:14px;left:0;right:0;text-align:center;color:#fff;
+        text-shadow:0 1px 4px #000;font-size:.95rem;font-weight:600;pointer-events:none}
+  .camctl{flex:0 0 auto;display:flex;gap:10px;padding:12px;background:#0d1117;border-top:1px solid var(--line)}
+  .camctl button{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--ink);
+        border-radius:13px;padding:14px;font-size:1rem;font-weight:700}
+  .camerr{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+        gap:14px;padding:28px;text-align:center;color:var(--dim);background:var(--bg)}
+
+  /* qty overlay */
+  #qty{background:var(--bg)}
+  .qbody{flex:1;display:flex;flex-direction:column;padding:18px;gap:16px;overflow:auto}
+  .prodcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;text-align:center}
+  .prodcard .lbl{color:var(--dim);font-size:.8rem;letter-spacing:.16em;text-transform:uppercase}
+  .prodcard .pid{font-size:2.6rem;font-weight:800;color:var(--orange);font-variant-numeric:tabular-nums;margin-top:4px}
+  .prodcard .sub{color:var(--dim);font-size:.85rem;margin-top:4px;word-break:break-all}
+  .dupwarn{background:rgba(255,122,26,.12);border:1px solid var(--orange);color:#ffd9b8;
+        border-radius:12px;padding:10px 12px;font-size:.9rem;display:none}
+  .qrow{display:flex;align-items:center;gap:14px;justify-content:center}
+  .qstep{width:74px;height:74px;border-radius:16px;background:var(--panel2);border:1px solid var(--line);
+        color:var(--ink);font-size:2.2rem;font-weight:800;display:grid;place-items:center}
+  #qval{width:150px;text-align:center;font-size:3rem;font-weight:800;background:transparent;border:0;
+        border-bottom:3px solid var(--orange);color:var(--ink);font-variant-numeric:tabular-nums;padding:6px}
+  .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:auto}
+  .pad button{height:62px;background:var(--panel);border:1px solid var(--line);color:var(--ink);
+        border-radius:13px;font-size:1.5rem;font-weight:700}
+  .pad button.wide{grid-column:span 1}
+  .qactions{display:flex;gap:12px}
+  .qactions button{flex:1;height:62px;border-radius:14px;font-size:1.15rem;font-weight:800}
+  .save{background:var(--green);color:#06160d}
+  .cancel{background:var(--panel);border:1px solid var(--line);color:var(--ink)}
+
+  /* list */
+  #list{background:var(--bg)}
+  .lbody{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+  .rec{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);
+        border-radius:12px;padding:12px 14px}
+  .rec .rid{font-weight:800;font-size:1.05rem;font-variant-numeric:tabular-nums}
+  .rec .rmeta{color:var(--dim);font-size:.78rem}
+  .rec .rqty{margin-left:auto;font-size:1.5rem;font-weight:800;color:var(--orange);font-variant-numeric:tabular-nums}
+  .rec .sdot{width:9px;height:9px;border-radius:50%;background:var(--dim)}
+  .rec.synced .sdot{background:var(--green)}
+  .rec .del{background:transparent;border:0;color:var(--red);font-size:1.3rem;padding:4px 8px}
+  .empty{margin:auto;color:var(--dim);text-align:center;padding:30px}
+  .lfoot{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;border-top:1px solid var(--line);background:#0d1117}
+  .lfoot button{height:54px;border-radius:13px;font-size:1rem;font-weight:800;background:var(--panel);
+        border:1px solid var(--line);color:var(--ink)}
+  .lfoot .primary{background:var(--orange);color:#1a1006}
+  .lfoot .danger{color:var(--red)}
+
+  /* modal */
+  .modal{position:fixed;inset:0;background:rgba(6,9,13,.8);display:none;align-items:center;justify-content:center;
+        z-index:30;padding:22px}
+  .modal.show{display:flex}
+  .msheet{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;width:min(440px,94vw)}
+  .msheet h3{font-size:1.2rem;margin-bottom:8px}
+  .msheet p{color:var(--dim);margin-bottom:16px;font-size:.92rem}
+  .msheet input{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+        border-radius:11px;padding:13px;font-size:1rem;margin-bottom:14px}
+  .mbtns{display:flex;gap:10px}
+  .mbtns button{flex:1;height:50px;border-radius:12px;font-weight:800;font-size:1rem}
+  .mbtns .ok{background:var(--orange);color:#1a1006}
+  .mbtns .ghost{background:var(--panel2);border:1px solid var(--line);color:var(--ink)}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0d1117;border:1px solid var(--line);
+        color:var(--ink);padding:12px 18px;border-radius:12px;font-weight:700;z-index:40;opacity:0;transition:opacity .2s;
+        pointer-events:none;max-width:90vw;text-align:center}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand"><span class="dot"></span>StockScan</div>
+    <div class="hbtns">
+      <button class="hbtn" id="syncBtn">Sync <span class="badge pending" id="pendBadge" hidden>0</span></button>
+      <button class="hbtn" id="listBtn">List <span class="badge" id="cntBadge">0</span></button>
+    </div>
+  </header>
+
+  <main>
+    <!-- SCANNER -->
+    <section class="view active" id="scanner">
+      <div class="camwrap">
+        <video id="video" playsinline muted></video>
+        <div class="reticle" id="reticle"></div>
+        <div class="scanhint" id="scanhint">Point at a QR tag</div>
+        <div class="camerr" id="camerr">
+          <div style="font-size:1.1rem;color:var(--ink);font-weight:700">Camera not available</div>
+          <div id="camerrmsg"></div>
+          <button class="hbtn" id="retryCam">Retry camera</button>
+          <button class="hbtn" id="manualBtn2">Enter ID manually</button>
+        </div>
+      </div>
+      <div class="camctl">
+        <button id="torchBtn">Torch</button>
+        <button id="manualBtn">Manual ID</button>
+      </div>
+    </section>
+
+    <!-- QTY -->
+    <section class="view" id="qty">
+      <div class="qbody">
+        <div class="prodcard">
+          <div class="lbl">Product</div>
+          <div class="pid" id="qpid">--</div>
+          <div class="sub" id="qsub"></div>
+        </div>
+        <div class="dupwarn" id="dupwarn"></div>
+        <div class="lbl" style="text-align:center;color:var(--dim);font-size:.8rem;letter-spacing:.16em;text-transform:uppercase">Counted qty</div>
+        <div class="qrow">
+          <button class="qstep" id="qminus">-</button>
+          <input id="qval" type="text" inputmode="none" readonly value="0">
+          <button class="qstep" id="qplus">+</button>
+        </div>
+        <div class="pad" id="pad"></div>
+        <div class="qactions">
+          <button class="cancel" id="qcancel">Cancel</button>
+          <button class="save" id="qsave">Save</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIST -->
+    <section class="view" id="list">
+      <div class="lbody" id="lbody"></div>
+      <div class="lfoot">
+        <button id="exportJson">Export JSON</button>
+        <button id="exportCsv">Export CSV</button>
+        <button class="primary" id="syncBtn2">Sync to laptop</button>
+        <button id="setLaptop">Laptop addr</button>
+        <button class="danger" id="clearBatch">Clear batch</button>
+        <button id="backScan">Back to scan</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal" id="modal"><div class="msheet" id="msheet"></div></div>
+  <div class="toast" id="toast"></div>
+
+  <script src="vendor/jsqr.min.js"></script>
+  <script src="parser.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
