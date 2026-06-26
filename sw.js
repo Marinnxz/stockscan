@@ -1,6 +1,6 @@
 /* StockScan service worker — precache the app shell so it runs fully offline on-device.
    POST (laptop sync) and cross-origin requests pass straight through, never cached. */
-const CACHE = "stockscan-v3";
+const CACHE = "stockscan-v4";
 const ASSETS = [
   "./", "index.html", "app.js", "parser.js", "manifest.webmanifest",
   "vendor/jsqr.min.js", "icons/icon-192.png", "icons/icon-512.png"

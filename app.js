@@ -46,16 +46,21 @@ async function loadProducts() {
   try {
     const base = (await DB.getMeta("laptopUrl")) || "";
     if (!base) return;
-    const r = await fetch(base.replace(/\/+$/, "") + "/products.json", { cache: "no-store" });
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 4000);   // never hang on a slow/absent PC
+    const r = await fetch(base.replace(/\/+$/, "") + "/products.json", { cache: "no-store", signal: ctl.signal });
+    clearTimeout(timer);
     if (r.ok) { PRODUCTS = await r.json(); await DB.setMeta("products", PRODUCTS); }
   } catch (e) { /* offline / PC unreachable: keep the cached map */ }
 }
 function productName(id) { return PRODUCTS[String(id)] || ""; }
 function setName(id) {
   const nm = productName(id);
+  if (!Object.keys(PRODUCTS).length) { el.qname.textContent = "Names not loaded — set Laptop addr"; el.qname.classList.add("miss"); return; }
   el.qname.textContent = nm || "Name not found (still counts)";
   el.qname.classList.toggle("miss", !nm);
 }
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
 // ---------- state ----------
 let records = [];
@@ -227,16 +232,17 @@ function renderList() {
     '<div class="rec ' + (r.synced ? "synced" : "") + '" data-id="' + r.id + '">' +
       '<span class="sdot"></span>' +
       '<div><div class="rid">#' + r.productId + '</div>' +
-      '<div class="rmeta">' + (productName(r.productId) ? productName(r.productId) + " · " : "") + fmtTime(r.scannedAt) + (r.synced ? " · synced" : " · pending") + '</div></div>' +
+      '<div class="rmeta">' + (productName(r.productId) ? esc(productName(r.productId)) + " · " : "") + fmtTime(r.scannedAt) + (r.synced ? " · synced" : " · pending") + '</div></div>' +
       '<div class="rqty">' + r.qty + '</div>' +
       '<button class="del" data-del="' + r.id + '">&times;</button>' +
     '</div>'
   ).join("");
 }
 function recordsToCsv() {
-  const head = "productId,qty,model,host,scannedAt,rawUrl";
+  const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+  const head = "productId,qty,name,model,host,scannedAt,rawUrl";
   const rows = records.map(r =>
-    [r.productId, r.qty, r.model, r.host, new Date(r.scannedAt).toISOString(), '"' + (r.rawUrl || "").replace(/"/g, '""') + '"'].join(","));
+    [r.productId, r.qty, q(productName(r.productId)), q(r.model), q(r.host), new Date(r.scannedAt).toISOString(), q(r.rawUrl)].join(","));
   return [head].concat(rows).join("\r\n");
 }
 function download(name, text, type) {
@@ -265,7 +271,7 @@ async function trySync(silent) {
   if (!pending.length) { if (!silent) toast("Nothing pending"); return; }
   if (!navigator.onLine) { if (!silent) toast("Offline — will sync when on wifi"); return; }
   try {
-    const res = await fetch(url.replace(/\/$/, "") + "/upload", {
+    const res = await fetch(url.replace(/\/+$/, "") + "/upload", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ batchId: meta.batchId, records: pending })
     });
@@ -297,7 +303,7 @@ function askLaptop() {
     '<div class="mbtns"><button class="ghost" id="lcancel">Cancel</button><button class="ok" id="lsave">Save</button></div>'
   );
   $("#lcancel").onclick = closeModal;
-  $("#lsave").onclick = async () => { meta.laptopUrl = $("#lap").value.trim(); await DB.setMeta("laptopUrl", meta.laptopUrl); closeModal(); toast("Saved laptop address"); };
+  $("#lsave").onclick = async () => { meta.laptopUrl = $("#lap").value.trim(); await DB.setMeta("laptopUrl", meta.laptopUrl); closeModal(); toast("Saved laptop address"); loadProducts(); };
 }
 
 function askManual() {
@@ -429,7 +435,7 @@ async function init() {
   wire();
   await DB.open();
   if (navigator.storage && navigator.storage.persist) { try { await navigator.storage.persist(); } catch (e) {} }
-  await loadProducts();
+  loadProducts();   // background — never block app startup on the network (offline-first boot)
   meta.batchId = (await DB.getMeta("batchId")) || newBatchId();
   meta.startedAt = (await DB.getMeta("startedAt")) || Date.now();
   meta.laptopUrl = (await DB.getMeta("laptopUrl")) || "";
