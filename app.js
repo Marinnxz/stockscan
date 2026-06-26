@@ -7,7 +7,7 @@
 const $ = (s) => document.querySelector(s);
 const el = {};
 ["video","reticle","scanhint","camerr","camerrmsg","torchBtn","manualBtn","manualBtn2","retryCam",
- "qpid","qsub","dupwarn","qval","qminus","qplus","pad","qcancel","qsave",
+ "qpid","qname","qsub","dupwarn","qval","qminus","qplus","pad","qcancel","qsave",
  "lbody","syncBtn","syncBtn2","listBtn","backScan","exportJson","exportCsv","setLaptop","clearBatch",
  "cntBadge","pendBadge","modal","msheet","toast","installBtn"].forEach(id => el[id] = document.getElementById(id));
 
@@ -36,6 +36,26 @@ const DB = {
   getMeta(k) { return DB._p(DB._s("meta", "readonly").get(k)).then(r => (r ? r.v : undefined)); },
   setMeta(k, v) { return DB._p(DB._s("meta", "readwrite").put({ k, v })); }
 };
+
+// ---------- product name map (productId -> name), offline-cached ----------
+let PRODUCTS = {};
+async function loadProducts() {
+  // instant: load the cached map first (works fully offline, no PC needed)
+  try { const c = await DB.getMeta("products"); if (c && typeof c === "object") PRODUCTS = c; } catch (e) {}
+  // refresh from the PC receiver when reachable, then re-cache for offline
+  try {
+    const base = (await DB.getMeta("laptopUrl")) || "";
+    if (!base) return;
+    const r = await fetch(base.replace(/\/+$/, "") + "/products.json", { cache: "no-store" });
+    if (r.ok) { PRODUCTS = await r.json(); await DB.setMeta("products", PRODUCTS); }
+  } catch (e) { /* offline / PC unreachable: keep the cached map */ }
+}
+function productName(id) { return PRODUCTS[String(id)] || ""; }
+function setName(id) {
+  const nm = productName(id);
+  el.qname.textContent = nm || "Name not found (still counts)";
+  el.qname.classList.toggle("miss", !nm);
+}
 
 // ---------- state ----------
 let records = [];
@@ -148,6 +168,7 @@ function getQval() { return Math.max(0, parseInt(el.qval.value, 10) || 0); }
 function openQty(tag) {
   currentTag = tag; editingId = null;
   el.qpid.textContent = tag.productId;
+  setName(tag.productId);
   el.qsub.textContent = tag.model + "  @  " + tag.host;
   const existing = records.find(r => r.productId === tag.productId);
   if (existing) {
@@ -166,6 +187,7 @@ function openEdit(rec) {
   currentTag = { productId: rec.productId, model: rec.model, rawUrl: rec.rawUrl, host: rec.host };
   editingId = rec.id;
   el.qpid.textContent = rec.productId;
+  setName(rec.productId);
   el.qsub.textContent = rec.model + "  @  " + rec.host;
   el.dupwarn.style.display = "none";
   setQval(rec.qty);
@@ -205,7 +227,7 @@ function renderList() {
     '<div class="rec ' + (r.synced ? "synced" : "") + '" data-id="' + r.id + '">' +
       '<span class="sdot"></span>' +
       '<div><div class="rid">#' + r.productId + '</div>' +
-      '<div class="rmeta">' + r.model.replace("product.", "") + " · " + fmtTime(r.scannedAt) + (r.synced ? " · synced" : " · pending") + '</div></div>' +
+      '<div class="rmeta">' + (productName(r.productId) ? productName(r.productId) + " · " : "") + fmtTime(r.scannedAt) + (r.synced ? " · synced" : " · pending") + '</div></div>' +
       '<div class="rqty">' + r.qty + '</div>' +
       '<button class="del" data-del="' + r.id + '">&times;</button>' +
     '</div>'
@@ -407,6 +429,7 @@ async function init() {
   wire();
   await DB.open();
   if (navigator.storage && navigator.storage.persist) { try { await navigator.storage.persist(); } catch (e) {} }
+  await loadProducts();
   meta.batchId = (await DB.getMeta("batchId")) || newBatchId();
   meta.startedAt = (await DB.getMeta("startedAt")) || Date.now();
   meta.laptopUrl = (await DB.getMeta("laptopUrl")) || "";

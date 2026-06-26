@@ -56,6 +56,8 @@
   .prodcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;text-align:center}
   .prodcard .lbl{color:var(--dim);font-size:.8rem;letter-spacing:.16em;text-transform:uppercase}
   .prodcard .pid{font-size:2.6rem;font-weight:800;color:var(--orange);font-variant-numeric:tabular-nums;margin-top:4px}
+  .prodcard .pname{font-size:1.2rem;font-weight:700;color:var(--ink);margin-top:6px;line-height:1.3;word-break:break-word}
+  .prodcard .pname.miss{color:var(--dim);font-weight:600;font-size:.95rem;font-style:italic}
   .prodcard .sub{color:var(--dim);font-size:.85rem;margin-top:4px;word-break:break-all}
   .dupwarn{background:rgba(255,122,26,.12);border:1px solid var(--orange);color:#ffd9b8;
         border-radius:12px;padding:10px 12px;font-size:.9rem;display:none}
@@ -146,6 +148,7 @@
         <div class="prodcard">
           <div class="lbl">Product</div>
           <div class="pid" id="qpid">--</div>
+          <div class="pname" id="qname"></div>
           <div class="sub" id="qsub"></div>
         </div>
         <div class="dupwarn" id="dupwarn"></div>
